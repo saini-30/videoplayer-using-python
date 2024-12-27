@@ -1,6 +1,6 @@
 import vlc
 import tkinter as tk
-from tkinter import filedialog, Button, Frame, Scale, HORIZONTAL, OptionMenu, StringVar
+from tkinter import filedialog, Button, Frame, Scale, HORIZONTAL
 
 class VLCPlayerApp:
     def __init__(self, root):
@@ -20,12 +20,19 @@ class VLCPlayerApp:
         # Setup UI components
         self.setup_ui()
 
+        # Bind spacebar key event to play/pause
+        self.root.bind("<space>", self.space_key_handler)
+        # Bind Home, End, Left, and Right keys globally
+        self.root.bind_all("<Home>", self.global_home_key_handler)
+        self.root.bind_all("<End>", self.global_end_key_handler)
+        self.root.bind_all("<Left>", self.global_left_key_handler)
+        self.root.bind_all("<Right>", self.global_right_key_handler)
+        # Bind "m" key press and release events
+        self.root.bind("<KeyPress-m>", self.m_key_pressed)
+        self.root.bind("<KeyRelease-m>", self.m_key_released)
+
     def setup_ui(self):
         """Set up the UI with buttons to control playback"""
-        # Video progress slider
-        self.progress_slider = Scale(self.root, from_=0, to=1000, orient=HORIZONTAL, command=self.set_position, resolution=0.1, label="Progress")
-        self.progress_slider.pack(fill=tk.X, padx=10, pady=10)
-
         button_frame = Frame(self.root)
         button_frame.pack(pady=10)
 
@@ -34,33 +41,38 @@ class VLCPlayerApp:
 
         self.back_button = Button(button_frame, text="<< 10s", command=self.rewind_10s)
         self.back_button.pack(side=tk.LEFT, padx=5)
+        self.back_button.bind("<Left>", lambda event: self.rewind_10s())
+        self.back_button.bind("<Home>", lambda event: self.rewind_10s())
 
         self.play_pause_button = Button(button_frame, text="Play", command=self.play_pause)
         self.play_pause_button.pack(side=tk.LEFT, padx=5)
 
         self.forward_button = Button(button_frame, text="10s >>", command=self.forward_10s)
         self.forward_button.pack(side=tk.LEFT, padx=5)
+        self.forward_button.bind("<Right>", lambda event: self.forward_10s())
+        self.forward_button.bind("<End>", lambda event: self.forward_10s())
 
         # Volume slider
         self.volume_slider = Scale(button_frame, from_=0, to=100, orient=HORIZONTAL, label="Volume", command=self.set_volume)
         self.volume_slider.set(50)  # Set initial volume to 50%
         self.volume_slider.pack(side=tk.LEFT, padx=5)
+        self.volume_slider.bind("<Left>", self.decrease_volume)
+        self.volume_slider.bind("<Right>", self.increase_volume)
+        self.volume_slider.bind("<Home>", self.decrease_volume)
+        self.volume_slider.bind("<End>", self.increase_volume)
+        self.volume_slider.bind("<Enter>", lambda event: self.volume_slider.focus_set())
+        self.volume_slider.bind("<Leave>", lambda event: self.root.focus_set())
 
         # Speed slider
         self.speed_slider = Scale(button_frame, from_=0.5, to=2.0, resolution=0.1, orient=HORIZONTAL, label="Speed", command=self.set_speed)
         self.speed_slider.set(1.0)  # Set initial speed to normal (1.0x)
         self.speed_slider.pack(side=tk.LEFT, padx=5)
-
-        # Crop size options
-        self.crop_options = ["16:9", "4:3", "1:1", "21:9"]
-        self.selected_crop = StringVar(self.root)
-        self.selected_crop.set(self.crop_options[0])  # Set default crop size
-
-        self.crop_menu = OptionMenu(button_frame, self.selected_crop, *self.crop_options, command=self.set_crop)
-        self.crop_menu.pack(side=tk.LEFT, padx=5)
-
-        # Update the progress slider periodically
-        self.update_progress()
+        self.speed_slider.bind("<Left>", self.decrease_speed)
+        self.speed_slider.bind("<Right>", self.increase_speed)
+        self.speed_slider.bind("<Home>", self.decrease_speed)
+        self.speed_slider.bind("<End>", self.increase_speed)
+        self.speed_slider.bind("<Enter>", lambda event: self.speed_slider.focus_set())
+        self.speed_slider.bind("<Leave>", lambda event: self.root.focus_set())
 
     def load_video(self):
         """Load a video using VLC and play it"""
@@ -97,10 +109,6 @@ class VLCPlayerApp:
         """Set the playback speed of the VLC player"""
         self.player.set_rate(float(speed))
 
-    def set_crop(self, crop_size):
-        """Set the crop size of the VLC player"""
-        self.player.video_set_crop_geometry(crop_size)
-
     def forward_10s(self):
         """Forward the video by 10 seconds"""
         current_time = self.player.get_time()
@@ -111,20 +119,57 @@ class VLCPlayerApp:
         current_time = self.player.get_time()
         self.player.set_time(max(0, current_time - 10000))  # Rewind by 10 seconds, ensuring not to go below 0
 
-    def set_position(self, position):
-        """Set the position of the video"""
-        length = self.player.get_length()
-        self.player.set_time(int(float(position) * length / 1000))
+    def space_key_handler(self, event):
+        """Handle spacebar key event to toggle play/pause"""
+        self.play_pause()
 
-    def update_progress(self):
-        """Update the progress slider periodically"""
-        if self.player.is_playing():
-            length = self.player.get_length()
-            current_time = self.player.get_time()
-            if length > 0:
-                position = current_time * 1000 / length
-                self.progress_slider.set(position)
-        self.root.after(1000, self.update_progress)
+    def global_home_key_handler(self, event):
+        """Handle global Home key event to rewind 10 seconds"""
+        if self.root.focus_get() not in [self.volume_slider, self.speed_slider]:
+            self.rewind_10s()
+
+    def global_end_key_handler(self, event):
+        """Handle global End key event to forward 10 seconds"""
+        if self.root.focus_get() not in [self.volume_slider, self.speed_slider]:
+            self.forward_10s()
+
+    def global_left_key_handler(self, event):
+        """Handle global Left key event to rewind 10 seconds"""
+        if self.root.focus_get() not in [self.volume_slider, self.speed_slider]:
+            self.rewind_10s()
+
+    def global_right_key_handler(self, event):
+        """Handle global Right key event to forward 10 seconds"""
+        if self.root.focus_get() not in [self.volume_slider, self.speed_slider]:
+            self.forward_10s()
+
+    def m_key_pressed(self, event):
+        """Handle 'm' key press event to set speed to 1.7x"""
+        self.player.set_rate(1.7)
+
+    def m_key_released(self, event):
+        """Handle 'm' key release event to set speed back to normal"""
+        self.player.set_rate(1.0)
+
+    def decrease_volume(self, event):
+        """Decrease the volume by 5 units"""
+        current_volume = self.volume_slider.get()
+        self.volume_slider.set(max(0, current_volume - 5))
+
+    def increase_volume(self, event):
+        """Increase the volume by 5 units"""
+        current_volume = self.volume_slider.get()
+        self.volume_slider.set(min(100, current_volume + 5))
+
+    def decrease_speed(self, event):
+        """Decrease the speed by 0.1 units"""
+        current_speed = self.speed_slider.get()
+        self.speed_slider.set(max(0.5, current_speed - 0.1))
+
+    def increase_speed(self, event):
+        """Increase the speed by 0.1 units"""
+        current_speed = self.speed_slider.get()
+        self.speed_slider.set(min(2.0, current_speed + 0.1))
 
 if __name__ == "__main__":
     root = tk.Tk()
