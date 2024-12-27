@@ -92,6 +92,9 @@ class VLCPlayerApp:
             self.player.play()
             self.play_pause_button.config(text="Pause")  # Set button text to "Pause" when video starts playing
 
+            # Set the VLC player to fullscreen
+            self.player.set_fullscreen(True)
+
     def play_pause(self):
         """Toggle play/pause"""
         if self.player.is_playing():
