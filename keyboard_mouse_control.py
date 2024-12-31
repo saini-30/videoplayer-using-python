@@ -75,7 +75,7 @@ class KeyboardMouseControl:
 
     def m_key_pressed(self, event):
         """Handle 'm' key press event to set speed to 1.7x"""
-        self.player.set_rate(1.7)
+        self.player.set_rate(1.5)
 
     def m_key_released(self, event):
         """Handle 'm' key release event to set speed back to normal"""
