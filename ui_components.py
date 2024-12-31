@@ -1,22 +1,13 @@
 import tkinter as tk
-from tkinter import filedialog, Button, Frame, Scale, HORIZONTAL
-from tkinter import ttk
-import vlc
-from keyboard_mouse_control import KeyboardMouseControl
+from tkinter import filedialog, Button, Frame, Scale, HORIZONTAL, ttk
 
-class VLCPlayerApp:
-    def __init__(self, root):
+class UIComponents:
+    def __init__(self, root, player):
         self.root = root
-        self.root.title("VLC Media Player Control")
-        self.root.geometry("800x600")  # Set the size of the window
+        self.player = player
         
-        # VLC MediaPlayer setup
-        self.player = vlc.MediaPlayer()
-
-        self.video_length = 0  # Total video length in milliseconds
-
         # Create a frame to hold the VLC video
-        self.video_frame = Frame(self.root, bg="black", width=800, height=540)
+        self.video_frame = Frame(self.root, bg="black", width=800, height=450)
         self.video_frame.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
 
         # Progress bar and time labels just below the video frame
@@ -34,12 +25,6 @@ class VLCPlayerApp:
 
         # Setup UI components
         self.setup_ui()
-
-        # Initialize keyboard and mouse control
-        self.keyboard_mouse_control = KeyboardMouseControl(self.player, self.volume_slider, self.speed_slider, self.progress, self.root)
-
-        # Update progress bar
-        self.update_progress_bar()
 
     def setup_ui(self):
         """Set up the UI with buttons to control playback"""
@@ -69,48 +54,39 @@ class VLCPlayerApp:
         self.speed_slider.pack(side=tk.LEFT, padx=5)
 
     def load_video(self):
-        """Load a video using VLC and play it"""
+        """Load a video using VLC"""
         file_path = filedialog.askopenfilename(filetypes=[("Video files", "*.mp4;*.avi;*.mkv;*.wmv")])
-
         if file_path:
-            media = vlc.Media(file_path)
-            self.player.set_media(media)
-
-            # Set video output to the Tkinter frame (using hwnd for Windows)
-            self.player.set_hwnd(self.video_frame.winfo_id())
-
-            self.player.play()
+            self.player.load_video(file_path, self.video_frame.winfo_id())
             self.play_pause_button.config(text="Pause")  # Set button text to "Pause" when video starts playing
 
     def play_pause(self):
         """Toggle play/pause"""
-        if self.player.is_playing():
-            self.play_pause_button.config(text="Play")
-            self.player.pause()
-        else:
+        self.player.play_pause()
+        if self.player.player.is_playing():
             self.play_pause_button.config(text="Pause")
-            self.player.play()
+        else:
+            self.play_pause_button.config(text="Play")
 
     def set_volume(self, volume):
         """Set the volume of the VLC player"""
-        self.player.audio_set_volume(int(volume))
+        self.player.set_volume(volume)
 
     def set_speed(self, speed):
         """Set the playback speed of the VLC player"""
-        self.player.set_rate(float(speed))
+        self.player.set_speed(speed)
 
     def forward_10s(self):
         """Forward the video by 10 seconds"""
-        current_time = self.player.get_time()
-        self.player.set_time(current_time + 10000)  # Forward by 10 seconds
+        self.player.forward_10s()
 
     def rewind_10s(self):
         """Rewind the video by 10 seconds"""
-        current_time = self.player.get_time()
-        self.player.set_time(max(0, current_time - 10000))  # Rewind by 10 seconds, ensuring not to go below 0
+        self.player.rewind_10s()
 
     def update_progress_bar(self):
-        if self.player.is_playing():
+        """Update progress bar and time labels"""
+        if self.player.player.is_playing():
             length = self.player.get_length() / 1000  # in seconds
             current_time = self.player.get_time() / 1000  # in seconds
             self.progress['maximum'] = length
@@ -122,11 +98,7 @@ class VLCPlayerApp:
         self.root.after(1000, self.update_progress_bar)
 
     def format_time(self, seconds):
+        """Format seconds as hh:mm:ss"""
         hours, remainder = divmod(seconds, 3600)
         mins, secs = divmod(remainder, 60)
         return f"{int(hours):02}:{int(mins):02}:{int(secs):02}"
-
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = VLCPlayerApp(root)
-    root.mainloop()
