@@ -13,7 +13,7 @@ class VLCPlayerApp:
         # VLC MediaPlayer setup
         self.player = vlc.MediaPlayer()
 
-        self.video_length = 0  # Total video length in milliseconds
+        self.speed_is_2x = False  # Track the current playback speed
 
         # Create a frame to hold the VLC video
         self.video_frame = Frame(self.root, bg="black", width=800, height=540)
